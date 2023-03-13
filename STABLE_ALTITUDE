@@ -1,0 +1,49 @@
+-- Define the new flight mode name
+local modeName = "STABLE_ALTITUDE"
+
+-- Create a new PID controller instance for roll, pitch, yaw, and altitude
+local pid_roll = PIDController:new(0.2, 0, 0)
+local pid_pitch = PIDController:new(0.2, 0, 0)
+local pid_yaw = PIDController:new(0.1, 0, 0)
+local pid_altitude = PIDController:new(0.2, 0, 0)
+
+-- Set the PIDs to use gyro, orientation, and barometer data for input
+pid_roll:setInputSource("GYRO")
+pid_pitch:setInputSource("GYRO")
+pid_yaw:setInputSource("ORIENTATION")
+pid_altitude:setInputSource("BAROMETER")
+
+-- Define the function that will be called when this mode is active
+function modeStableAltitude()
+  -- Get the current roll, pitch, and yaw angles
+  local roll = getRoll()
+  local pitch = getPitch()
+  local yaw = getYaw()
+  
+  -- Get the current altitude and target altitude (in meters)
+  local altitude = getAltitude()
+  local targetAltitude = 2 -- Change this to your desired target altitude
+  
+  -- Calculate the error between the target altitude and the current altitude
+  local error_altitude = targetAltitude - altitude
+  
+  -- Calculate the error between the desired upright position and the current angles
+  local error_roll = 0 - roll
+  local error_pitch = 0 - pitch
+  local error_yaw = 0 - yaw
+  
+  -- Calculate the PID output for roll, pitch, yaw, and altitude
+  local output_roll = pid_roll:update(error_roll)
+  local output_pitch = pid_pitch:update(error_pitch)
+  local output_yaw = pid_yaw:update(error_yaw)
+  local output_altitude = pid_altitude:update(error_altitude)
+  
+  -- Apply the PID outputs to the drone's motors
+  setMotor(1, throttle + output_roll + output_pitch - output_yaw + output_altitude)
+  setMotor(2, throttle - output_roll + output_pitch + output_yaw + output_altitude)
+  setMotor(3, throttle + output_roll - output_pitch + output_yaw + output_altitude)
+  setMotor(4, throttle - output_roll - output_pitch - output_yaw + output_altitude)
+end
+
+-- Register the new flight mode with Betaflight
+modeRegister(modeName, modeStableAltitude)
